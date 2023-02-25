@@ -1,4 +1,4 @@
-const MAX_LENGTH: usize = 1735; // for 48kHz
+const MAX_LENGTH: usize = 1920; // for 48kHz
 
 pub struct DelayLine {
     buffer: [f32; MAX_LENGTH],
