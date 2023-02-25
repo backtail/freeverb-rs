@@ -2,10 +2,10 @@ use crate::delay_line::DelayLine;
 
 pub struct Comb {
     delay_line: DelayLine,
-    feedback: f64,
-    filter_state: f64,
-    dampening: f64,
-    dampening_inverse: f64,
+    feedback: f32,
+    filter_state: f32,
+    dampening: f32,
+    dampening_inverse: f32,
 }
 
 impl Comb {
@@ -19,20 +19,19 @@ impl Comb {
         }
     }
 
-    pub fn set_dampening(&mut self, value: f64) {
+    pub fn set_dampening(&mut self, value: f32) {
         self.dampening = value;
         self.dampening_inverse = 1.0 - value;
     }
 
-    pub fn set_feedback(&mut self, value: f64) {
+    pub fn set_feedback(&mut self, value: f32) {
         self.feedback = value;
     }
 
-    pub fn tick(&mut self, input: f64) -> f64 {
+    pub fn tick(&mut self, input: f32) -> f32 {
         let output = self.delay_line.read();
 
-        self.filter_state =
-            output * self.dampening_inverse + self.filter_state * self.dampening;
+        self.filter_state = output * self.dampening_inverse + self.filter_state * self.dampening;
 
         self.delay_line
             .write_and_advance(input + self.filter_state * self.feedback);

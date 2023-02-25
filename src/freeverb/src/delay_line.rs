@@ -1,24 +1,28 @@
+const MAX_LENGTH: usize = 1735; // for 48kHz
+
 pub struct DelayLine {
-    buffer: Vec<f64>,
+    buffer: [f32; MAX_LENGTH],
+    length: usize,
     index: usize,
 }
 
 impl DelayLine {
     pub fn new(length: usize) -> Self {
         Self {
-            buffer: vec![0.0; length],
+            buffer: [0.0_f32; MAX_LENGTH],
+            length,
             index: 0,
         }
     }
 
-    pub fn read(&self) -> f64 {
+    pub fn read(&self) -> f32 {
         self.buffer[self.index]
     }
 
-    pub fn write_and_advance(&mut self, value: f64) {
+    pub fn write_and_advance(&mut self, value: f32) {
         self.buffer[self.index] = value;
 
-        if self.index == self.buffer.len() - 1 {
+        if self.index == self.length - 1 {
             self.index = 0;
         } else {
             self.index += 1;
@@ -35,10 +39,10 @@ mod tests {
                 let mut line = super::DelayLine::new($length);
                 for i in 0..$length {
                     assert_eq!(line.read(), 0.0);
-                    line.write_and_advance(i as f64);
+                    line.write_and_advance(i as f32);
                 }
                 for i in 0..$length {
-                    assert_eq!(line.read(), i as f64);
+                    assert_eq!(line.read(), i as f32);
                     line.write_and_advance(0.0);
                 }
             }

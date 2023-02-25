@@ -1,12 +1,12 @@
 use crate::{all_pass::AllPass, comb::Comb};
 
-const FIXED_GAIN: f64 = 0.015;
+const FIXED_GAIN: f32 = 0.015;
 
-const SCALE_WET: f64 = 3.0;
-const SCALE_DAMPENING: f64 = 0.4;
+const SCALE_WET: f32 = 3.0;
+const SCALE_DAMPENING: f32 = 0.4;
 
-const SCALE_ROOM: f64 = 0.28;
-const OFFSET_ROOM: f64 = 0.7;
+const SCALE_ROOM: f32 = 0.28;
+const OFFSET_ROOM: f32 = 0.7;
 
 const STEREO_SPREAD: usize = 23;
 
@@ -39,18 +39,18 @@ const ALLPASS_TUNING_R4: usize = 225 + STEREO_SPREAD;
 pub struct Freeverb {
     combs: [(Comb, Comb); 8],
     allpasses: [(AllPass, AllPass); 4],
-    wet_gains: (f64, f64),
-    wet: f64,
-    width: f64,
-    dry: f64,
-    input_gain: f64,
-    dampening: f64,
-    room_size: f64,
+    wet_gains: (f32, f32),
+    wet: f32,
+    width: f32,
+    dry: f32,
+    input_gain: f32,
+    dampening: f32,
+    room_size: f32,
     frozen: bool,
 }
 
 fn adjust_length(length: usize, sr: usize) -> usize {
-    (length as f64 * sr as f64 / 44100.0) as usize
+    (length as f32 * sr as f32 / 44100.0) as usize
 }
 
 impl Freeverb {
@@ -127,7 +127,7 @@ impl Freeverb {
         freeverb
     }
 
-    pub fn tick(&mut self, input: (f64, f64)) -> (f64, f64) {
+    pub fn tick(&mut self, input: (f32, f32)) -> (f32, f32) {
         let input_mixed = (input.0 + input.1) * FIXED_GAIN * self.input_gain;
 
         let mut out = (0.0, 0.0);
@@ -148,7 +148,7 @@ impl Freeverb {
         )
     }
 
-    pub fn set_dampening(&mut self, value: f64) {
+    pub fn set_dampening(&mut self, value: f32) {
         self.dampening = value * SCALE_DAMPENING;
         self.update_combs();
     }
@@ -158,12 +158,12 @@ impl Freeverb {
         self.update_combs();
     }
 
-    pub fn set_wet(&mut self, value: f64) {
+    pub fn set_wet(&mut self, value: f32) {
         self.wet = value * SCALE_WET;
         self.update_wet_gains();
     }
 
-    pub fn set_width(&mut self, value: f64) {
+    pub fn set_width(&mut self, value: f32) {
         self.width = value;
         self.update_wet_gains();
     }
@@ -181,7 +181,7 @@ impl Freeverb {
         self.update_combs();
     }
 
-    pub fn set_room_size(&mut self, value: f64) {
+    pub fn set_room_size(&mut self, value: f32) {
         self.room_size = value * SCALE_ROOM + OFFSET_ROOM;
         self.update_combs();
     }
@@ -202,7 +202,7 @@ impl Freeverb {
         }
     }
 
-    pub fn set_dry(&mut self, value: f64) {
+    pub fn set_dry(&mut self, value: f32) {
         self.dry = value;
     }
 }
