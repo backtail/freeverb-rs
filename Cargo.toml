@@ -2,6 +2,7 @@
 members = [
   "src/clib",
   "src/freeverb",
+  "src/embedded-audio-tools",
   "examples/app_gtk",
   "examples/wasm",
 ]

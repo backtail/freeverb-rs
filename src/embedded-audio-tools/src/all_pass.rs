@@ -1,13 +1,15 @@
 use crate::delay_line::DelayLine;
+use crate::memory::mut_mem_slice::MutMemSlice;
 
+#[derive(Clone, Copy)]
 pub struct AllPass {
-    delay_line: DelayLine,
+    pub delay_line: DelayLine,
 }
 
 impl AllPass {
-    pub fn new(delay_length: usize) -> Self {
+    pub fn new(buffer: MutMemSlice) -> Self {
         Self {
-            delay_line: DelayLine::new(delay_length),
+            delay_line: DelayLine::new(buffer),
         }
     }
 
@@ -15,7 +17,6 @@ impl AllPass {
         let delayed = self.delay_line.read();
         let output = -input + delayed;
 
-        // in the original version of freeverb this is a member which is never modified
         let feedback = 0.5;
 
         self.delay_line
@@ -27,9 +28,13 @@ impl AllPass {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::tools::mut_mem_slice::from_slice;
+
     #[test]
     fn basic_ticking() {
-        let mut allpass = super::AllPass::new(2);
+        let mut buffer = [0.0_f32; 2];
+        let mut allpass = AllPass::new(from_slice(&mut buffer[..]));
         assert_eq!(allpass.tick(1.0), -1.0);
         assert_eq!(allpass.tick(0.0), 0.0);
         assert_eq!(allpass.tick(0.0), 1.0);

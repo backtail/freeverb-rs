@@ -20,14 +20,15 @@ fn run_main<Module: AudioModule>() {
 
     let (command_sender, command_receiver) = crossbeam_channel::bounded(1024);
 
-    let sample_rate = 44100;
+    let sample_rate = 48_000;
     let _audio_streams = audio_thread::start_audio::<Module>(command_receiver, sample_rate)
         .expect("Failed to start audio");
 
     let window = Window::new(WindowType::Toplevel);
-    window.set_title("freeverb-rs");
+    window.set_title("freeverb-rs embedded");
     window.set_default_size(350, 300);
     window.set_position(WindowPosition::Center);
+    window.set_resizable(false);
 
     window.connect_delete_event(|_, _| {
         gtk::main_quit();

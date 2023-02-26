@@ -37,22 +37,22 @@ impl CommandHandler for FreeverbProcessor {
         match command {
             Command::SetParameter(id, value) => match Parameters::from_usize(id).unwrap() {
                 Parameters::Dampening => {
-                    self.freeverb.set_dampening(value as f64);
+                    self.freeverb.set_dampening(value);
                 }
                 Parameters::Width => {
-                    self.freeverb.set_width(value as f64);
+                    self.freeverb.set_width(value);
                 }
                 Parameters::RoomSize => {
-                    self.freeverb.set_room_size(value as f64);
+                    self.freeverb.set_room_size(value);
                 }
                 Parameters::Freeze => {
                     self.freeverb.set_freeze(value != 0.0);
                 }
                 Parameters::Dry => {
-                    self.freeverb.set_dry(value as f64);
+                    self.freeverb.set_dry(value);
                 }
                 Parameters::Wet => {
-                    self.freeverb.set_wet(value as f64);
+                    self.freeverb.set_wet(value);
                 }
             },
         }
@@ -61,10 +61,10 @@ impl CommandHandler for FreeverbProcessor {
 
 impl AudioProcessor for FreeverbProcessor {
     fn process_stereo(&mut self, input: &[f32], output: &mut [f32]) {
-        assert!(input.len() == output.len());
+        debug_assert!(input.len() == output.len());
 
         for i in (0..input.len()).step_by(2) {
-            let result = self.freeverb.tick((input[i] as f64, input[i + 1] as f64));
+            let result = self.freeverb.tick((input[i], input[i + 1]));
 
             output[i] = result.0 as f32;
             output[i + 1] = result.1 as f32;

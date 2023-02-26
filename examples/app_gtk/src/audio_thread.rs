@@ -16,7 +16,7 @@ pub fn start_audio<Module: AudioModule>(
     let mut processor = Module::create_processor(sample_rate);
 
     const CHANNELS: usize = 2;
-    const FRAMES_PER_BUFFER: usize = 128;
+    const FRAMES_PER_BUFFER: usize = 256;
     const SAMPLES_PER_BUFFER: usize = FRAMES_PER_BUFFER * CHANNELS;
 
     let host = cpal::default_host();
@@ -32,7 +32,7 @@ pub fn start_audio<Module: AudioModule>(
     let stream_config = cpal::StreamConfig {
         channels: CHANNELS as u16,
         sample_rate: cpal::SampleRate(sample_rate as u32),
-        buffer_size: cpal::BufferSize::Fixed(FRAMES_PER_BUFFER as u32),
+        buffer_size: cpal::BufferSize::Fixed((FRAMES_PER_BUFFER + 1) as u32),
     };
 
     let mut process_buffer = [0.0f32; SAMPLES_PER_BUFFER];
@@ -43,11 +43,6 @@ pub fn start_audio<Module: AudioModule>(
         .build_input_stream(
             &stream_config,
             move |data: &[f32], _info: &cpal::InputCallbackInfo| {
-                // print!("input buffer[0..8]: [");
-                // for x in data[0..8].iter() {
-                //     print!("{}, ", x);
-                // }
-                // println!("]");
                 debug_assert!(data.len() == SAMPLES_PER_BUFFER);
 
                 while let Ok(command) = command_receiver.try_recv() {
@@ -66,7 +61,6 @@ pub fn start_audio<Module: AudioModule>(
         .build_output_stream(
             &stream_config,
             move |data: &mut [f32], _info: &cpal::OutputCallbackInfo| {
-                // println!("output buffer");
                 debug_assert!(data.len() == SAMPLES_PER_BUFFER);
 
                 let consumed = from_input.pop_slice(data);

@@ -1,5 +1,7 @@
-use crate::memory_slice::{MemSliceError, MutMemoryPtr};
-use MemSliceError::*;
+use crate::memory::{
+    MemSliceError::{self, *},
+    MutMemoryPtr,
+};
 
 /// Raw slice pointer that implements the `Send` trait since it's only acting on static memory
 #[derive(Clone, Copy)]

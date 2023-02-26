@@ -5,3 +5,12 @@ authors = ["irh <ian.r.hobson@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+embedded-audio-tools = { path = "../embedded-audio-tools" }
+
+[features]
+default = ["SR48k"]
+SR44k1 = []
+SR48k = []
+SR88k2 = []
+SR96k = []
+SR192 = []

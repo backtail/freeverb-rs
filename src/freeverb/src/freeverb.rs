@@ -1,4 +1,6 @@
-use crate::{all_pass::AllPass, comb::Comb};
+use crate::tools::{mut_mem_slice::from_slice, MutMemSlice};
+use crate::tools::{AllPass, Comb};
+use crate::{MAX_BUFFER_SIZE, SAMPLING_RATE, TUNINGS};
 
 const FIXED_GAIN: f32 = 0.015;
 
@@ -8,35 +10,8 @@ const SCALE_DAMPENING: f32 = 0.4;
 const SCALE_ROOM: f32 = 0.28;
 const OFFSET_ROOM: f32 = 0.7;
 
-const STEREO_SPREAD: usize = 23;
-
-const COMB_TUNING_L1: usize = 1116;
-const COMB_TUNING_R1: usize = 1116 + STEREO_SPREAD;
-const COMB_TUNING_L2: usize = 1188;
-const COMB_TUNING_R2: usize = 1188 + STEREO_SPREAD;
-const COMB_TUNING_L3: usize = 1277;
-const COMB_TUNING_R3: usize = 1277 + STEREO_SPREAD;
-const COMB_TUNING_L4: usize = 1356;
-const COMB_TUNING_R4: usize = 1356 + STEREO_SPREAD;
-const COMB_TUNING_L5: usize = 1422;
-const COMB_TUNING_R5: usize = 1422 + STEREO_SPREAD;
-const COMB_TUNING_L6: usize = 1491;
-const COMB_TUNING_R6: usize = 1491 + STEREO_SPREAD;
-const COMB_TUNING_L7: usize = 1557;
-const COMB_TUNING_R7: usize = 1557 + STEREO_SPREAD;
-const COMB_TUNING_L8: usize = 1617;
-const COMB_TUNING_R8: usize = 1617 + STEREO_SPREAD;
-
-const ALLPASS_TUNING_L1: usize = 556;
-const ALLPASS_TUNING_R1: usize = 556 + STEREO_SPREAD;
-const ALLPASS_TUNING_L2: usize = 441;
-const ALLPASS_TUNING_R2: usize = 441 + STEREO_SPREAD;
-const ALLPASS_TUNING_L3: usize = 341;
-const ALLPASS_TUNING_R3: usize = 341 + STEREO_SPREAD;
-const ALLPASS_TUNING_L4: usize = 225;
-const ALLPASS_TUNING_R4: usize = 225 + STEREO_SPREAD;
-
 pub struct Freeverb {
+    delay_line_buffer: [f32; MAX_BUFFER_SIZE],
     combs: [(Comb, Comb); 8],
     allpasses: [(AllPass, AllPass); 4],
     wet_gains: (f32, f32),
@@ -49,65 +24,24 @@ pub struct Freeverb {
     frozen: bool,
 }
 
-fn adjust_length(length: usize, sr: usize) -> usize {
-    (length as f32 * sr as f32 / 44100.0) as usize
-}
-
 impl Freeverb {
     pub fn new(sr: usize) -> Self {
+        assert_eq!(
+            sr, SAMPLING_RATE,
+            "This reverb owns memory on which it the delay lines sit. To safe on memory usage, its size is calculated at compile time!"
+        );
+
         let mut freeverb = Freeverb {
-            combs: [
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L1, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R1, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L2, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R2, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L3, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R3, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L4, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R4, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L5, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R5, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L6, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R6, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L7, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R7, sr)),
-                ),
-                (
-                    Comb::new(adjust_length(COMB_TUNING_L8, sr)),
-                    Comb::new(adjust_length(COMB_TUNING_R8, sr)),
-                ),
-            ],
-            allpasses: [
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L1, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R1, sr)),
-                ),
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L2, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R2, sr)),
-                ),
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L3, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R3, sr)),
-                ),
-                (
-                    AllPass::new(adjust_length(ALLPASS_TUNING_L4, sr)),
-                    AllPass::new(adjust_length(ALLPASS_TUNING_R4, sr)),
-                ),
-            ],
+            // reserve memory for delay lines and initiate null pointers
+            delay_line_buffer: [0.0_f32; MAX_BUFFER_SIZE],
+            combs: [(
+                Comb::new(MutMemSlice::null()),
+                Comb::new(MutMemSlice::null()),
+            ); 8],
+            allpasses: [(
+                AllPass::new(MutMemSlice::null()),
+                AllPass::new(MutMemSlice::null()),
+            ); 4],
             wet_gains: (0.0, 0.0),
             wet: 0.0,
             dry: 0.0,
@@ -127,10 +61,45 @@ impl Freeverb {
         freeverb
     }
 
+    /// Checks if static buffer placement in memory and the pointers of the delaylines align. If not, it aligns it.
+    ///
+    /// Happens normally only once, after the object has been created.
+    fn check_buffer_alignment(&mut self) {
+        let buffer_start = core::ptr::addr_of_mut!(self.delay_line_buffer[0]);
+        let pointer_start = self.combs[0].0.delay_line.buffer.ptr.0;
+
+        if buffer_start != pointer_start {
+            let mut offset = 0;
+            // Give delay lines the approriate memory strips on static buffer
+            for (i, _tuning) in TUNINGS.iter().enumerate().step_by(2) {
+                let stage = i / 2;
+                if i < 16 {
+                    self.combs[stage].0.delay_line.buffer =
+                        from_slice(&mut self.delay_line_buffer[offset..offset + TUNINGS[i]]);
+                    offset += TUNINGS[i];
+
+                    self.combs[stage].1.delay_line.buffer =
+                        from_slice(&mut self.delay_line_buffer[offset..offset + TUNINGS[i + 1]]);
+                    offset += TUNINGS[i + 1];
+                } else {
+                    self.allpasses[stage - 8].0.delay_line.buffer =
+                        from_slice(&mut self.delay_line_buffer[offset..offset + TUNINGS[i]]);
+                    offset += TUNINGS[i];
+
+                    self.allpasses[stage - 8].1.delay_line.buffer =
+                        from_slice(&mut self.delay_line_buffer[offset..offset + TUNINGS[i + 1]]);
+                    offset += TUNINGS[i + 1];
+                }
+            }
+        }
+    }
+
     pub fn tick(&mut self, input: (f32, f32)) -> (f32, f32) {
         let input_mixed = (input.0 + input.1) * FIXED_GAIN * self.input_gain;
 
         let mut out = (0.0, 0.0);
+
+        self.check_buffer_alignment();
 
         for combs in self.combs.iter_mut() {
             out.0 += combs.0.tick(input_mixed);
@@ -211,9 +180,9 @@ impl Freeverb {
 mod tests {
     #[test]
     fn ticking_does_something() {
-        let mut freeverb = super::Freeverb::new(44100);
+        let mut freeverb = super::Freeverb::new(super::SAMPLING_RATE);
         assert_eq!(freeverb.tick((1.0, 1.0)), (0.0, 0.0));
-        for _ in 0..super::COMB_TUNING_R8 * 2 {
+        for _ in 0..(1640 * 4) {
             freeverb.tick((0.0, 0.0));
         }
         assert_ne!(freeverb.tick((0.0, 0.0)), (0.0, 0.0));

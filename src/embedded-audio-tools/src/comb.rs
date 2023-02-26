@@ -1,7 +1,9 @@
 use crate::delay_line::DelayLine;
+use crate::memory::mut_mem_slice::MutMemSlice;
 
+#[derive(Clone, Copy)]
 pub struct Comb {
-    delay_line: DelayLine,
+    pub delay_line: DelayLine,
     feedback: f32,
     filter_state: f32,
     dampening: f32,
@@ -9,9 +11,9 @@ pub struct Comb {
 }
 
 impl Comb {
-    pub fn new(delay_length: usize) -> Self {
+    pub fn new(buffer: MutMemSlice) -> Self {
         Self {
-            delay_line: DelayLine::new(delay_length),
+            delay_line: DelayLine::new(buffer),
             feedback: 0.5,
             filter_state: 0.0,
             dampening: 0.5,
@@ -42,9 +44,13 @@ impl Comb {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::tools::mut_mem_slice::from_slice;
+
     #[test]
     fn basic_ticking() {
-        let mut comb = super::Comb::new(2);
+        let mut buffer = [0.0_f32; 2];
+        let mut comb = Comb::new(from_slice(&mut buffer[..]));
         assert_eq!(comb.tick(1.0), 0.0);
         assert_eq!(comb.tick(0.0), 0.0);
         assert_eq!(comb.tick(0.0), 1.0);
