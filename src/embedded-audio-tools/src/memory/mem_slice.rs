@@ -13,6 +13,7 @@ pub struct MemSlice {
 unsafe impl Sync for MemSlice {}
 
 impl MemSlice {
+    #[inline(always)]
     pub fn null() -> MemSlice {
         MemSlice {
             ptr: MemoryPtr(core::ptr::null()),
@@ -53,16 +54,19 @@ impl MemSlice {
     }
 
     /// Only use this on static memory!
+    #[inline(always)]
     pub unsafe fn set_slice(&mut self, ptr: *const f32, length: usize) {
         self.ptr.0 = ptr;
         self.length = length;
     }
 
+    #[inline(always)]
     pub fn as_slice(&mut self) -> *const [f32] {
         core::ptr::slice_from_raw_parts(self.ptr.0, self.length)
     }
 }
 
+#[inline(always)]
 pub fn from_slice(slice: &[f32]) -> MemSlice {
     MemSlice {
         ptr: MemoryPtr(slice.as_ptr()),

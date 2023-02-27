@@ -13,6 +13,7 @@ pub struct MutMemSlice {
 unsafe impl Sync for MutMemSlice {}
 
 impl MutMemSlice {
+    #[inline(always)]
     pub fn null() -> MutMemSlice {
         MutMemSlice {
             ptr: MutMemoryPtr(core::ptr::null_mut()),
@@ -70,16 +71,19 @@ impl MutMemSlice {
     }
 
     /// Only use this on static memory!
+    #[inline(always)]
     pub unsafe fn set_slice(&mut self, ptr: *mut f32, length: usize) {
         self.ptr.0 = ptr;
         self.length = length;
     }
 
+    #[inline(always)]
     pub fn as_slice(&mut self) -> *mut [f32] {
         core::ptr::slice_from_raw_parts_mut(self.ptr.0, self.length)
     }
 }
 
+#[inline(always)]
 pub fn from_slice(slice: &mut [f32]) -> MutMemSlice {
     MutMemSlice {
         ptr: MutMemoryPtr(slice.as_mut_ptr()),
